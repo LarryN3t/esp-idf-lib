@@ -2,25 +2,22 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <ds1307.h>
+#include <string.h>
 
+#if defined(CONFIG_IDF_TARGET_ESP8266)
+#define SDA_GPIO 4
+#define SCL_GPIO 5
+#else
 #define SDA_GPIO 16
 #define SCL_GPIO 17
+#endif
 
 void ds1307_test(void *pvParameters)
 {
     i2c_dev_t dev;
+    memset(&dev, 0, sizeof(i2c_dev_t));
 
-    while (i2cdev_init() != ESP_OK)
-    {
-        printf("Could not init I2Cdev library\n");
-        vTaskDelay(250 / portTICK_PERIOD_MS);
-    }
-
-    while (ds1307_init_desc(&dev, 0, SDA_GPIO, SCL_GPIO) != ESP_OK)
-    {
-        printf("Could not init device descriptor\n");
-        vTaskDelay(250 / portTICK_PERIOD_MS);
-    }
+    ESP_ERROR_CHECK(ds1307_init_desc(&dev, 0, SDA_GPIO, SCL_GPIO));
 
     // setup datetime: 2018-04-11 00:52:10
     struct tm time = {
@@ -31,7 +28,7 @@ void ds1307_test(void *pvParameters)
         .tm_min  = 52,
         .tm_sec  = 10
     };
-    ds1307_set_time(&dev, &time);
+    ESP_ERROR_CHECK(ds1307_set_time(&dev, &time));
 
     while (1)
     {
@@ -46,6 +43,8 @@ void ds1307_test(void *pvParameters)
 
 void app_main()
 {
+    ESP_ERROR_CHECK(i2cdev_init());
+
     xTaskCreate(ds1307_test, "ds1307_test", configMINIMAL_STACK_SIZE * 8, NULL, 5, NULL);
 }
 

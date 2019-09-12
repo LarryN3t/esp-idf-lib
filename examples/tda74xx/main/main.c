@@ -2,9 +2,15 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <tda74xx.h>
+#include <string.h>
 
+#if defined(CONFIG_IDF_TARGET_ESP8266)
+#define SDA_GPIO 4
+#define SCL_GPIO 5
+#else
 #define SDA_GPIO 16
 #define SCL_GPIO 17
+#endif
 
 #define INPUT 0 // 0..3
 #define INPUT_GAIN 28 // 0dB..30dB
@@ -16,6 +22,7 @@
 void tda74xx_test(void *pvParameters)
 {
     i2c_dev_t dev;
+    memset(&dev, 0, sizeof(i2c_dev_t));
 
     // init device descriptor
     ESP_ERROR_CHECK(tda74xx_init_desc(&dev, 0, SDA_GPIO, SCL_GPIO));
