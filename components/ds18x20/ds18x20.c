@@ -1,12 +1,14 @@
 /**
  * @file ds18x20.c
  *
- * ESP-IDF driver for the DS18x20 family of one-wire temperature sensor ICs
+ * ESP-IDF driver for the DS18S20/DS18B20 one-wire temperature sensor ICs
  *
  * Ported from esp-open-rtos
- * Copyright (C) 2016 Grzegorz Hetman <ghetman@gmail.com>
- * Copyright (C) 2016 Alex Stewart <foogod@gmail.com>
+ *
+ * Copyright (C) 2016 Grzegorz Hetman <ghetman@gmail.com>\n
+ * Copyright (C) 2016 Alex Stewart <foogod@gmail.com>\n
  * Copyright (C) 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
  * BSD Licensed as described in the file LICENSE
  */
 #include "ds18x20.h"
@@ -28,12 +30,20 @@
 
 #define SLEEP_MS(x) vTaskDelay(((x) + portTICK_PERIOD_MS - 1) / portTICK_PERIOD_MS)
 #define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) return __; } while (0)
-#define CHECK_ARG(VAL) do { if (!VAL) return ESP_ERR_INVALID_ARG; } while (0)
+#define CHECK_ARG(VAL) do { if (!(VAL)) return ESP_ERR_INVALID_ARG; } while (0)
 
 #define DS18B20_FAMILY_ID 0x28
 #define DS18S20_FAMILY_ID 0x10
 
+#if defined(CONFIG_IDF_TARGET_ESP32)
 static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+#define PORT_ENTER_CRITICAL portENTER_CRITICAL(&mux)
+#define PORT_EXIT_CRITICAL portEXIT_CRITICAL(&mux)
+
+#elif defined(CONFIG_IDF_TARGET_ESP8266)
+#define PORT_ENTER_CRITICAL portENTER_CRITICAL()
+#define PORT_EXIT_CRITICAL portEXIT_CRITICAL()
+#endif
 
 static const char *TAG = "DS18x20";
 
@@ -47,12 +57,12 @@ esp_err_t ds18x20_measure(gpio_num_t pin, ds18x20_addr_t addr, bool wait)
     else
         onewire_select(pin, addr);
 
-    portENTER_CRITICAL(&mux);
+    PORT_ENTER_CRITICAL;
     onewire_write(pin, ds18x20_CONVERT_T);
     // For parasitic devices, power must be applied within 10us after issuing
     // the convert command.
     onewire_power(pin);
-    portEXIT_CRITICAL(&mux);
+    PORT_EXIT_CRITICAL;
 
     if (wait)
     {

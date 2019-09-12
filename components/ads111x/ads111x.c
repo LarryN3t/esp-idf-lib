@@ -4,7 +4,9 @@
  * ESP-IDF driver for ADS1113/ADS1114/ADS1115 I2C ADC
  *
  * Ported from esp-open-rtos
+ *
  * Copyright (C) 2016, 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
  * BSD Licensed as described in the file LICENSE
  */
 #include "ads111x.h"
@@ -139,10 +141,10 @@ esp_err_t ads111x_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_t port,
     dev->addr = addr;
     dev->cfg.sda_io_num = sda_gpio;
     dev->cfg.scl_io_num = scl_gpio;
+#if defined(CONFIG_IDF_TARGET_ESP32)
     dev->cfg.master.clk_speed = I2C_FREQ_HZ;
-    i2c_dev_create_mutex(dev);
-
-    return ESP_OK;
+#endif
+    return i2c_dev_create_mutex(dev);
 }
 
 esp_err_t ads111x_free_desc(i2c_dev_t *dev)

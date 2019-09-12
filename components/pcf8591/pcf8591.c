@@ -6,8 +6,9 @@
  *
  * Ported from esp-open-rtos
  *
- * Copyright (C) 2017 Pham Ngoc Thanh <pnt239@gmail.com>
+ * Copyright (C) 2017 Pham Ngoc Thanh <pnt239@gmail.com>\n
  * Copyright (C) 2017, 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
  * BSD Licensed as described in the file LICENSE
  */
 #include "pcf8591.h"
@@ -42,7 +43,9 @@ esp_err_t pcf8591_init_desc(i2c_dev_t *dev, uint8_t addr, i2c_port_t port, gpio_
     dev->addr = addr;
     dev->cfg.sda_io_num = sda_gpio;
     dev->cfg.scl_io_num = scl_gpio;
+#if defined(CONFIG_IDF_TARGET_ESP32)
     dev->cfg.master.clk_speed = I2C_FREQ_HZ;
+#endif
     i2c_dev_create_mutex(dev);
 
     return ESP_OK;
@@ -57,8 +60,7 @@ esp_err_t pcf8591_free_desc(i2c_dev_t *dev)
 
 esp_err_t pcf8591_read(i2c_dev_t *dev, pcf8591_input_conf_t conf, uint8_t channel, uint8_t *value)
 {
-    CHECK_ARG(dev);
-    CHECK_ARG(value);
+    CHECK_ARG(dev && value);
     if (channel >= 4)
     {
         ESP_LOGE(TAG, "Invalid channel number %d", channel);

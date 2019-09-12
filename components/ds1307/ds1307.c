@@ -1,10 +1,12 @@
 /**
  * @file ds1307.c
  *
- * ESP-IDF Driver for DS1307 RTC
+ * ESP-IDF driver for DS1307 real-time clock
  *
  * Ported from esp-open-rtos
- * Copyright (C) 2016 Ruslan V. Uss <unclerus@gmail.com>
+ *
+ * Copyright (C) 2016, 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
  * BSD Licensed as described in the file LICENSE
  */
 #include "ds1307.h"
@@ -67,10 +69,10 @@ esp_err_t ds1307_init_desc(i2c_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio,
     dev->addr = DS1307_ADDR;
     dev->cfg.sda_io_num = sda_gpio;
     dev->cfg.scl_io_num = scl_gpio;
+#if defined(CONFIG_IDF_TARGET_ESP32)
     dev->cfg.master.clk_speed = I2C_FREQ_HZ;
-    i2c_dev_create_mutex(dev);
-
-    return ESP_OK;
+#endif
+    return i2c_dev_create_mutex(dev);
 }
 
 esp_err_t ds1307_free_desc(i2c_dev_t *dev)
@@ -222,7 +224,7 @@ esp_err_t ds1307_read_ram(i2c_dev_t *dev, uint8_t offset, uint8_t *buf, uint8_t 
     CHECK_ARG(buf);
 
     if (offset + len > RAM_SIZE)
-        return ESP_ERR_INVALID_SIZE;
+        return ESP_ERR_NO_MEM;
 
     I2C_DEV_TAKE_MUTEX(dev);
     I2C_DEV_CHECK(dev, i2c_dev_read_reg(dev, RAM_REG + offset, buf, len));
@@ -237,7 +239,7 @@ esp_err_t ds1307_write_ram(i2c_dev_t *dev, uint8_t offset, uint8_t *buf, uint8_t
     CHECK_ARG(buf);
 
     if (offset + len > RAM_SIZE)
-        return ESP_ERR_INVALID_SIZE;
+        return ESP_ERR_NO_MEM;
 
     I2C_DEV_TAKE_MUTEX(dev);
     I2C_DEV_CHECK(dev, i2c_dev_write_reg(dev, RAM_REG + offset, buf, len));

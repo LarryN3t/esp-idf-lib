@@ -1,11 +1,15 @@
 /**
  * @file max7219.h
+ * @defgroup max7219 max7219
+ * @{
  *
  * ESP-IDF driver for MAX7219/MAX7221
  * Serially Interfaced, 8-Digit LED Display Drivers
  *
  * Ported from esp-open-rtos
+ *
  * Copyright (C) 2017, 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
  * BSD Licensed as described in the file LICENSE
  */
 #ifndef __MAX7219_H__
@@ -14,6 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <driver/spi_master.h>
+#include <driver/gpio.h> // add by nopnop2002
 
 #ifdef __cplusplus
 extern "C" {
@@ -121,5 +126,7 @@ esp_err_t max7219_draw_image_8x8(max7219_t *dev, uint8_t pos, const void *image)
 #ifdef __cplusplus
 }
 #endif
+
+/**@}*/
 
 #endif /* __MAX7219_H__ */

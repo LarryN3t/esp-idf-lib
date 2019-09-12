@@ -1,9 +1,12 @@
 /**
  * @file tda74xx.h
+ * @defgroup tda74xx tda74xx
+ * @{
  *
- * ESP-IDF driver for TDA7439/TDA7439DS/TDA7440
+ * ESP-IDF driver for TDA7439/TDA7439DS/TDA7440 audioprocessors
  *
  * Copyright (C) 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
  * MIT Licensed as described in the file LICENSE
  */
 #ifndef __TDA74XX_H__
@@ -17,6 +20,18 @@ extern "C" {
 #endif
 
 #define TDA74XX_ADDR 0x44 //!< I2C address
+
+#define TDA74XX_MAX_INPUT      3    //!< Maximum input number
+
+#define TDA74XX_MIN_VOLUME     -48  //!< Mute volume level, dB
+#define TDA74XX_MAX_VOLUME     0    //!< Maximum colume level, dB
+
+#define TDA74XX_MAX_INPUT_GAIN 30   //!< Maximum input gain, dB
+
+#define TDA74XX_MIN_EQ_GAIN    -14  //!< Minimum equalizer gain, dB
+#define TDA74XX_MAX_EQ_GAIN    14   //!< Maximum equalizer gain, dB
+
+#define TDA74XX_MAX_ATTEN      56   //!< Maximum speaker attenuation level, dB
 
 /**
  * Audio channel
@@ -97,5 +112,7 @@ esp_err_t tda74xx_set_speaker_attenuation(i2c_dev_t *dev, tda74xx_channel_t chan
 #ifdef __cplusplus
 }
 #endif
+
+/**@}*/
 
 #endif /* __TDA74XX_H__ */

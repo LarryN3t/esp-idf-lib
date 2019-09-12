@@ -1,21 +1,32 @@
 /**
+ * @file hd44780.c
+ *
  * ESP-IDF driver for HD44780 compartible LCD text displays
  *
  * Ported from esp-open-rtos
+ *
  * Copyright (C) 2016, 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
  * BSD Licensed as described in the file LICENSE
  */
 #include "hd44780.h"
 #include <string.h>
 #include <esp_system.h>
 
+#if defined(CONFIG_IDF_TARGET_ESP32)
+#include <esp32/rom/ets_sys.h> // add by nopnop2002
+#elif defined(CONFIG_IDF_TARGET_ESP8266)
+#include <rom/ets_sys.h>
+#endif
+
 #define MS 1000
 
 #define BV(x) (1 << (x))
+#define GPIO_BIT(x) (1ULL << (x))
 
 #define DELAY_CMD_LONG  (3 * MS) // >1.53ms according to datasheet
 #define DELAY_CMD_SHORT (60)     // >39us according to datasheet
-#define DELAY_TOGGLE    (10)
+#define DELAY_TOGGLE    (1)      // E cycle time >= 1μs, E pulse width >= 450ns, Data set-up time >= 195ns
 #define DELAY_INIT      (5 * MS)
 
 #define CMD_CLEAR        0x01
@@ -26,6 +37,11 @@
 #define CMD_FUNC_SET     0x20
 #define CMD_CGRAM_ADDR   0x40
 #define CMD_DDRAM_ADDR   0x80
+
+#define ARG_MOVE_RIGHT 0x04
+#define ARG_MOVE_LEFT 0x00
+#define CMD_SHIFT_LEFT  (CMD_SHIFT | CMD_DISPLAY_CTRL | ARG_MOVE_LEFT)
+#define CMD_SHIFT_RIGHT (CMD_SHIFT | CMD_DISPLAY_CTRL | ARG_MOVE_RIGHT)
 
 // CMD_ENTRY_MODE
 #define ARG_EM_INCREMENT    BV(1)
@@ -67,12 +83,13 @@ static esp_err_t write_nibble(const hd44780_t *lcd, uint8_t b, bool rs)
     }
     else
     {
+        CHECK(gpio_set_level(lcd->pins.rs, rs));
+        ets_delay_us(1); // Address Setup time >= 60ns.
+        CHECK(gpio_set_level(lcd->pins.e, true));
         CHECK(gpio_set_level(lcd->pins.d7, (b >> 3) & 1));
         CHECK(gpio_set_level(lcd->pins.d6, (b >> 2) & 1));
         CHECK(gpio_set_level(lcd->pins.d5, (b >> 1) & 1));
         CHECK(gpio_set_level(lcd->pins.d4, b & 1));
-        CHECK(gpio_set_level(lcd->pins.rs, rs));
-        CHECK(gpio_set_level(lcd->pins.e, true));
         toggle_delay();
         CHECK(gpio_set_level(lcd->pins.e, false));
     }
@@ -99,14 +116,14 @@ esp_err_t hd44780_init(const hd44780_t *lcd)
         memset(&io_conf, 0, sizeof(gpio_config_t));
         io_conf.mode = GPIO_MODE_OUTPUT;
         io_conf.pin_bit_mask =
-                BV(lcd->pins.rs) |
-                BV(lcd->pins.e) |
-                BV(lcd->pins.d4) |
-                BV(lcd->pins.d5) |
-                BV(lcd->pins.d6) |
-                BV(lcd->pins.d7);
+                GPIO_BIT(lcd->pins.rs) |
+                GPIO_BIT(lcd->pins.e) |
+                GPIO_BIT(lcd->pins.d4) |
+                GPIO_BIT(lcd->pins.d5) |
+                GPIO_BIT(lcd->pins.d6) |
+                GPIO_BIT(lcd->pins.d7);
         if (lcd->pins.bl != HD44780_NOT_USED)
-            io_conf.pin_bit_mask |= BV(lcd->pins.bl);
+            io_conf.pin_bit_mask |= GPIO_BIT(lcd->pins.bl);
         CHECK(gpio_config(&io_conf));
     }
 
@@ -117,6 +134,7 @@ esp_err_t hd44780_init(const hd44780_t *lcd)
         init_delay();
     }
     CHECK(write_nibble(lcd, CMD_FUNC_SET >> 4, false));
+    short_delay();
 
     // Specify the number of display lines and character font
     CHECK(write_byte(lcd,
@@ -230,6 +248,26 @@ esp_err_t hd44780_upload_character(const hd44780_t *lcd, uint8_t num, const uint
     }
 
     CHECK(hd44780_gotoxy(lcd, 0, 0));
+
+    return ESP_OK;
+}
+
+esp_err_t hd44780_scroll_left(const hd44780_t *lcd)
+{
+    CHECK_ARG(lcd);
+
+    CHECK(write_byte(lcd, CMD_SHIFT_LEFT, false));
+    short_delay();
+
+    return ESP_OK;
+}
+
+esp_err_t hd44780_scroll_right(const hd44780_t *lcd)
+{
+    CHECK_ARG(lcd);
+
+    CHECK(write_byte(lcd, CMD_SHIFT_RIGHT, false));
+    short_delay();
 
     return ESP_OK;
 }

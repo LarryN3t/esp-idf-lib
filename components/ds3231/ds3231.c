@@ -1,14 +1,16 @@
 /**
  * @file ds3231.c
  *
- * ESP-IDF driver for DS3231 high precision RTC module
+ * ESP-IDF driver for DS337 RTC and DS3231 high precision RTC module
  *
  * Ported from esp-open-rtos
- * Copyright (C) 2015 Richard A Burton <richardaburton@gmail.com>
- * Copyright (C) 2016 Bhuvanchandra DV <bhuvanchandra.dv@gmail.com>
+ *
+ * Copyright (C) 2015 Richard A Burton <richardaburton@gmail.com>\n
+ * Copyright (C) 2016 Bhuvanchandra DV <bhuvanchandra.dv@gmail.com>\n
+ * Copyright (C) 2018 Ruslan V. Uss <unclerus@gmail.com>
+ *
  * MIT Licensed as described in the file LICENSE
  */
-
 #include "ds3231.h"
 #include <esp_err.h>
 
@@ -16,12 +18,10 @@
 
 #define DS3231_STAT_OSCILLATOR 0x80
 #define DS3231_STAT_32KHZ      0x08
-#define DS3231_STAT_BUSY       0x04
 #define DS3231_STAT_ALARM_2    0x02
 #define DS3231_STAT_ALARM_1    0x01
 
 #define DS3231_CTRL_OSCILLATOR    0x80
-#define DS3231_CTRL_SQUAREWAVE_BB 0x40
 #define DS3231_CTRL_TEMPCONV      0x20
 #define DS3231_CTRL_ALARM_INTS    0x04
 #define DS3231_CTRL_ALARM2_INT    0x02
@@ -69,10 +69,10 @@ esp_err_t ds3231_init_desc(i2c_dev_t *dev, i2c_port_t port, gpio_num_t sda_gpio,
     dev->addr = DS3231_ADDR;
     dev->cfg.sda_io_num = sda_gpio;
     dev->cfg.scl_io_num = scl_gpio;
+#if defined(CONFIG_IDF_TARGET_ESP32)
     dev->cfg.master.clk_speed = I2C_FREQ_HZ;
-    i2c_dev_create_mutex(dev);
-
-    return ESP_OK;
+#endif
+    return i2c_dev_create_mutex(dev);
 }
 
 esp_err_t ds3231_free_desc(i2c_dev_t *dev)

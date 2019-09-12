@@ -3,7 +3,8 @@
  *
  * ESP-IDF I2C master thread-safe functions for communication with I2C slave
  *
- * Copyright (C) 2018 Ruslan V. Uss (https://github.com/UncleRus)
+ * Copyright (C) 2018 Ruslan V. Uss <https://github.com/UncleRus>
+ *
  * MIT Licensed as described in the file LICENSE
  */
 #include "i2cdev.h"
@@ -122,9 +123,11 @@ inline static bool cfg_equal(const i2c_config_t *a, const i2c_config_t *b)
 {
     return a->scl_io_num == b->scl_io_num
         && a->sda_io_num == b->sda_io_num
+#if defined(CONFIG_IDF_TARGET_ESP32)
+        && a->master.clk_speed == b->master.clk_speed
+#endif
         && a->scl_pullup_en == b->scl_pullup_en
-        && a->sda_pullup_en == b->sda_pullup_en
-        && a->master.clk_speed == b->master.clk_speed;
+        && a->sda_pullup_en == b->sda_pullup_en;
 }
 
 static esp_err_t i2c_setup_port(i2c_port_t port, const i2c_config_t *cfg)
@@ -139,12 +142,23 @@ static esp_err_t i2c_setup_port(i2c_port_t port, const i2c_config_t *cfg)
         memcpy(&temp, cfg, sizeof(i2c_config_t));
         temp.mode = I2C_MODE_MASTER;
 
+#if defined(CONFIG_IDF_TARGET_ESP32)
         i2c_driver_delete(port);
         if ((res = i2c_param_config(port, &temp)) != ESP_OK)
             return res;
         if ((res = i2c_driver_install(port, temp.mode, 0, 0, 0)) != ESP_OK)
             return res;
+#elif defined(CONFIG_IDF_TARGET_ESP8266)
+        /* i2c_driver_delete() cannot be called before i2c_driver_install() */
+        if ((res = i2c_driver_install(port, temp.mode)) != ESP_OK)
+            return res;
+        /* must be used after calling i2c_driver_install */
+        if ((res = i2c_param_config(port, &temp)) != ESP_OK)
+            return res;
+#endif
+
         memcpy(&configs[port], &temp, sizeof(i2c_config_t));
+        ESP_LOGD(TAG, "I2C driver successfully reconfigured on port %d", port);
     }
 
     return ESP_OK;
@@ -198,7 +212,7 @@ esp_err_t i2c_dev_write(const i2c_dev_t *dev, const void *out_reg, size_t out_re
             i2c_master_write(cmd, (void *)out_reg, out_reg_size, true);
         i2c_master_write(cmd, (void *)out_data, out_size, true);
         i2c_master_stop(cmd);
-        esp_err_t res = i2c_master_cmd_begin(dev->port, cmd, CONFIG_I2CDEV_TIMEOUT / portTICK_RATE_MS);
+        res = i2c_master_cmd_begin(dev->port, cmd, CONFIG_I2CDEV_TIMEOUT / portTICK_RATE_MS);
         if (res != ESP_OK)
             ESP_LOGE(TAG, "Could not write to device [0x%02x at %d]: %d", dev->addr, dev->port, res);
         i2c_cmd_link_delete(cmd);
